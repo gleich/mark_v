@@ -63,7 +63,6 @@ fn main() -> ! {
 
 	let switch_pin = pins.gpio15.into_pull_up_input();
 
-	// Sending individual digits
 	let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
 
 	info!("Setup everything");
@@ -72,22 +71,43 @@ fn main() -> ! {
 		.set_high()
 		.expect("Failed to set LED to high");
 
-	let mut index: u32 = 900;
+	let start = 60.0;
+	let mut index: f32 = start;
 	loop {
-		if switch_pin.is_low().unwrap() {
-			ht16k33.clear_display_buffer();
-			ht16k33.update_buffer_with_char(Index::One, AsciiChar::new('S'));
-			ht16k33.update_buffer_with_char(Index::Two, AsciiChar::new('T'));
-			ht16k33.update_buffer_with_char(Index::Three, AsciiChar::new('O'));
-			ht16k33.update_buffer_with_char(Index::Four, AsciiChar::new('P'));
-			info!("Is low");
+		if index == 0.0 {
+			if switch_pin.is_low().unwrap() {
+				index = start;
+				ht16k33
+					.set_dimming(Dimming::BRIGHTNESS_MIN)
+					.expect("Failed to set brightness to min");
+			} else {
+				ht16k33
+					.set_dimming(Dimming::BRIGHTNESS_MAX)
+					.expect("Failed to set brightness to max");
+				ht16k33.clear_display_buffer();
+				ht16k33.update_buffer_with_char(Index::One, AsciiChar::new('D'));
+				ht16k33.update_buffer_with_char(Index::Two, AsciiChar::new('O'));
+				ht16k33.update_buffer_with_char(Index::Three, AsciiChar::new('N'));
+				ht16k33.update_buffer_with_char(Index::Four, AsciiChar::new('E'));
+			}
 		} else {
-			info!("Is high, {}", index);
-			index -= 1;
-			ht16k33
-				.update_buffer_with_float(Index::One, (index as f32 / 60.0).round(), 2, 10)
-				.expect("Failed to update display");
-			delay.delay_ms(995);
+			if switch_pin.is_low().unwrap() {
+				ht16k33.clear_display_buffer();
+				ht16k33.update_buffer_with_char(Index::One, AsciiChar::new('S'));
+				ht16k33.update_buffer_with_char(Index::Two, AsciiChar::new('T'));
+				ht16k33.update_buffer_with_char(Index::Three, AsciiChar::new('O'));
+				ht16k33.update_buffer_with_char(Index::Four, AsciiChar::new('P'));
+			} else {
+				index -= 1.0;
+				let minutes = (index / 60.0).floor();
+				ht16k33
+					.update_buffer_with_float(Index::One, minutes, 2, 10)
+					.expect("Failed to update minute");
+				ht16k33
+					.update_buffer_with_float(Index::Three, (index - minutes * 60.0).floor(), 2, 10)
+					.expect("Failed to update second");
+				delay.delay_ms(1000);
+			}
 		}
 		ht16k33.write_display_buffer().unwrap();
 	}
