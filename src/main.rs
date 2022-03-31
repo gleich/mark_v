@@ -71,7 +71,7 @@ fn main() -> ! {
 		.set_high()
 		.expect("Failed to set LED to high");
 
-	let start = 60.0;
+	let start = 1_200.0;
 	let mut index: f32 = start;
 	loop {
 		if index == 0.0 {
@@ -103,9 +103,14 @@ fn main() -> ! {
 				ht16k33
 					.update_buffer_with_float(Index::One, minutes, 2, 10)
 					.expect("Failed to update minute");
-				ht16k33
-					.update_buffer_with_float(Index::Three, (index - minutes * 60.0).floor(), 2, 10)
-					.expect("Failed to update second");
+				let seconds = (index - minutes * 60.0).floor();
+				if seconds < 10.0 {
+					ht16k33.update_buffer_with_digit(Index::Four, seconds as u8);
+				} else {
+					ht16k33
+						.update_buffer_with_float(Index::Three, seconds, 2, 10)
+						.expect("Failed to update second");
+				}
 				delay.delay_ms(1000);
 			}
 		}
