@@ -16,3 +16,4 @@ panic-probe = { version = "0.3.0", features = ["print-defmt"] }
 ht16k33 = { version = "0.4.0", default-features = false }
 adafruit-alphanum4 = { version = "0.1.0", default-features = false  }
 ascii = { version = "1.0", default-features = false }
+num-traits = {version = "0.2.14", default-features = false}

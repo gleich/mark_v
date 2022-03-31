@@ -1,13 +1,14 @@
 #![no_std]
 #![no_main]
 
-use adafruit_alphanum4::{AlphaNum4, Index};
+use adafruit_alphanum4::{AlphaNum4, AsciiChar, Index};
 use cortex_m_rt::entry;
 use defmt::info;
-use embedded_hal::digital::v2::OutputPin;
+use embedded_hal::digital::v2::{InputPin, OutputPin};
 use embedded_time::duration::*;
 use embedded_time::rate::Extensions;
 use ht16k33::{Dimming, Display, HT16K33};
+use num_traits::float::FloatCore;
 use rp_pico::hal;
 use rp_pico::hal::pac;
 use rp_pico::hal::prelude::*;
@@ -60,14 +61,9 @@ fn main() -> ! {
 		.expect("Could not set dimming!");
 	ht16k33.clear_display_buffer();
 
+	let switch_pin = pins.gpio15.into_pull_up_input();
+
 	// Sending individual digits
-	ht16k33.update_buffer_with_digit(Index::One, 1);
-	ht16k33.update_buffer_with_digit(Index::Two, 2);
-	ht16k33.update_buffer_with_digit(Index::Three, 3);
-	ht16k33.update_buffer_with_digit(Index::Four, 4);
-
-	ht16k33.write_display_buffer().unwrap();
-
 	let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().integer());
 
 	info!("Setup everything");
@@ -76,5 +72,23 @@ fn main() -> ! {
 		.set_high()
 		.expect("Failed to set LED to high");
 
-	loop {}
+	let mut index: u32 = 900;
+	loop {
+		if switch_pin.is_low().unwrap() {
+			ht16k33.clear_display_buffer();
+			ht16k33.update_buffer_with_char(Index::One, AsciiChar::new('S'));
+			ht16k33.update_buffer_with_char(Index::Two, AsciiChar::new('T'));
+			ht16k33.update_buffer_with_char(Index::Three, AsciiChar::new('O'));
+			ht16k33.update_buffer_with_char(Index::Four, AsciiChar::new('P'));
+			info!("Is low");
+		} else {
+			info!("Is high, {}", index);
+			index -= 1;
+			ht16k33
+				.update_buffer_with_float(Index::One, (index as f32 / 60.0).round(), 2, 10)
+				.expect("Failed to update display");
+			delay.delay_ms(995);
+		}
+		ht16k33.write_display_buffer().unwrap();
+	}
 }
